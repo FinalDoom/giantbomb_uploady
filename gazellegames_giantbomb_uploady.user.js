@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.0.1
+// @version      0.0.2
 // @match        https://gazellegames.net/upload.php
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -11,7 +11,6 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_deleteValue
-// @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
 // @require      https://code.jquery.com/jquery-3.6.0.min.js
 // @require      https://raw.githubusercontent.com/tengattack/html2bbcode.js/master/lib/html2bbcode.js
@@ -72,146 +71,245 @@
     {regex: /Neo Geo'/, replacement: 'SNK Neo Geo'},
     {regex: /Oric'/, replacement: 'Tangerine Oric'},
   ];
+  const ratingReplacements = [
+    {regex: /Cero: A/, replacement: '3+'},
+    {regex: /Cero: B/, replacement: '12+'},
+    {regex: /Cero: C/, replacement: '16+'},
+    {regex: /Cero: D/, replacement: '16+'},
+    {regex: /Cero: Z/, replacement: '18+'},
+    {regex: /ESRB: EC/, replacement: '3+'}, // Needs verification
+    {regex: /ESRB: E/, replacement: '7+'},
+    {regex: /ESRB: T/, replacement: '12+'},
+    {regex: /ESRB: M/, replacement: '16+'},
+    {regex: /ESRB: AO/, replacement: '18+'}, // Needs verification
+  ];
 
   const bbConverter = new HTML2BBCode();
-  function html2bb(html) {
-    return bbConverter.feed(html).toString();
+  function html2bb(jqObj) {
+    return bbConverter
+      .feed(
+        jqObj
+          .html()
+          .replace(/<h2\s+[^>]+>/g, '<h2>')
+          .replace(/<\/div>/g, '<br/></div>'),
+      )
+      .toString()
+      .replace(/\[\/?h2]/g, '==')
+      .replace(/\[\/?h3]/g, '===')
+      .replace(/\[\/?h4]/g, '====')
+      .replace(/\[li\](.*)\[\/li\]/g, '[*]$1')
+      .replace(/\[\/?[uo]l\]/g, '');
   }
 
+  function fetchComplete(giantbomb) {
+    GM_setValue('giantbomb', giantbomb);
+    const ggnButton = $('#save_link');
+    ggnButton.off('click.validate');
+    ggnButton.on('click.complete', () => window.close());
+    ggnButton.val('Close and return to GGn').css({backgroundColor: 'green'});
+  }
+
+  $.fn.extend({
+    getYear: function () {
+      var year = [];
+      this.each(function () {
+        year.push(
+          $(this)
+            .text()
+            .trim()
+            .replace(/.*((?:19|20)\d\d).*/, '$1'),
+        );
+      });
+      return year.length === 1 ? year[0] : year.join(', ');
+    },
+    absoluteLinks: function () {
+      this.each(function () {
+        $(this)
+          .find('a')
+          .attr('href', (_, href) => new URL(href, window.location).href);
+        return this;
+      });
+      return this;
+    },
+  });
+
   function getGameInfo() {
-    const imagesUrl = $('.sub-nav .container > ul > li').eq(2).find('a').attr('href');
-    const releasesUrl = $('.sub-nav .container > ul > li').eq(6).find('a').attr('href');
-    const gameId = $('.sub-nav .container > ul > li').eq(0).find('a').attr('href').split('/')[2];
+    const saveLink = $('#save_link');
+    const imagesUrl = window.location.pathname + 'images/';
+    const releasesUrl = window.location.pathname + 'releases/';
+    const gameId = window.location.pathname.split('/')[2];
     const giantbomb = GM_getValue('giantbomb', {});
+
+    saveLink.val('Working...').css({backgroundColor: 'blue'});
 
     // #region Fetch wiki info
     giantbomb.giantbomb = window.location.toString();
     giantbomb.title = $('a.wiki-title').text().trim();
-    giantbomb.description = html2bb(
-      $('section .wiki-item-display.js-toc-content')
-        .html()
-        .replace(/\n+/g, '')
-        .replace(/<h2\s+[^>]+>/g, '<h2>')
-        //.replace(/<div.*/g, '')
-        .replace(/<\s*br\s*\/?>/g, '\n'),
-    ); //YOU SHOULD NOT DO THIS AT HOME
+    giantbomb.description = html2bb($('section .wiki-item-display.js-toc-content').absoluteLinks());
 
-    giantbomb.tags = $.map($(`#wiki-${gameId}-genres a`), (elem) => $(elem).text().trim())
-      .join(', ')
-      .toLowerCase();
+    giantbomb.tags = $.map($(`#wiki-${gameId}-genres a`), (elem) => $(elem).text().trim().toLowerCase());
+    giantbomb.alternate_titles = [$('.wiki-item-display .aliases').text()];
+    giantbomb.year = $(`#wiki-${gameId}-release_date`).getYear();
+    // #endregion Fetch wiki info
 
-    const platformsBox = $(`#wiki-${gameId}-platforms`);
-    platformsBox.css({border: '2px solid yellow'});
-    platformsBox.children('a').click(function (event) {
-      event.preventDefault();
-      giantbomb.platform = $(this).text();
-      platformsBox.css({border: ''});
+    // #region Fetch images
+    giantbomb.cover = $('.wiki-boxart img').attr('src');
+    $.ajax({
+      url: imagesUrl,
+      success: (data) => {
+        if (data.html) data = data.html;
+        const galleryMarker = $(data).find('#galleryMarker');
+        const galleryId = galleryMarker.attr('data-gallery-id');
+        const objectId = galleryMarker.attr('data-object-id');
+        $.ajax({
+          url: `/js/image-data.json?images=${galleryId}&start=0&count=16&object=${objectId}`,
+          success: (data) => {
+            giantbomb.screenshots = data.images.map(({original}) => original);
+            GM_setValue('giantbomb', giantbomb);
+            // #endregion Fetch images
 
-      // #region Fetch images
-      giantbomb.cover = $('.wiki-boxart img').attr('src');
-      $.ajax({
-        url: imagesUrl,
-        success: ({html}) => {
-          const galleryMarker = $(html).find('#galleryMarker');
-          const galleryId = galleryMarker.attr('data-gallery-id');
-          const objectId = galleryMarker.attr('data-object-id');
-          $.ajax({
-            url: `/js/image-data.json?images=${galleryId}&start=0&count=16&object=${objectId}`,
-            success: (data) => {
-              giantbomb.screenshots = data.images.map(({original}) => original);
-              GM_setValue('giantbomb', giantbomb);
-              // #endregion Fetch images
+            // #region Fetch release info
+            $.ajax({
+              url: releasesUrl,
+              success: (data) => {
+                // Here pull the TOC and display it for selection
+                const TOC = $(data).find('.aside-toc').parent();
+                if (!TOC.size()) {
+                  // If there is no TOC fall back to below for just selecting platform, nothing else
+                  $(`#wiki-${gameId}-platforms`)
+                    .css({border: '2px solid yellow'})
+                    .children('a')
+                    .click(function (event) {
+                      event.preventDefault();
+                      giantbomb.platform = $(this).text();
+                      $(this).css({border: ''});
+                      fetchComplete(giantbomb);
+                    });
+                  window.alert('Please choose a platform from the highlighed options');
+                  return;
+                }
 
-              // #region Fetch release info
-              $.ajax({
-                url: releasesUrl,
-                success: (data) => {
-                  const platformTbody = $(data)
-                    .find(`td[data-field='platform']:contains('${giantbomb.platform}')`)
-                    .parent()
-                    .parent();
-                  window.asdfasdfasdf = platformTbody;
+                // Display TOC to choose appropriate specific release
+                $('body').before(
+                  $('<div #toc-overlay>')
+                    .css({
+                      background: 'rgba(0,0,0,.8)',
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignContent: 'center',
+                      zIndex: 5000,
+                    })
+                    .append(TOC.css({width: '443px', margin: 'auto'})),
+                );
+                TOC.find('h3').text('Please choose a release').css({color: 'yellow'});
+                TOC.find('a').click(function (event) {
+                  event.preventDefault();
+                  if ($(this).attr('href').startsWith('#toc-release-platform')) return;
+                  // UI response stuff
+                  TOC.append(saveLink.css({width: '', height: '', left: '', top: '', position: ''}).remove())
+                    .find('h3')
+                    .css({color: ''});
 
-                  giantbomb.alternate_titles = $.map(
-                    $(data)
-                      .find('td[data-field="platform"]')
-                      .not(`:contains('${giantbomb.platform}')`)
-                      .parent()
-                      .parent()
-                      .find('td[data-field="name"]'),
+                  const releaseId = $(this)
+                    .attr('href')
+                    .replace(/#toc-release-(\d+)/, '$1');
+
+                  const alternateReleases = $.map(
+                    $(data).find(`td[data-field='name']:not([data-id$='-${releaseId}'])`),
                     (elem) => $(elem).text().trim().replace(/,/, ''),
-                  ).join(', ');
+                  );
+                  if (alternateReleases && giantbomb.alternate_titles) {
+                    giantbomb.alternate_titles = giantbomb.alternate_titles.concat(alternateReleases);
+                  }
 
-                  giantbomb.rating = platformTbody.find('td[data-field="rating"]').text().trim().replace(/^$/, 'N/A');
-                  const releaseTitle = platformTbody.find('td[data-field="name"]').text().trim();
-                  if (giantbomb.title !== releaseTitle) {
+                  const releaseBlock = $(data).find(`[name='toc-release-${releaseId}']`).next('.release');
+                  const releaseTitle = releaseBlock.find('[data-field="name"]').text().trim();
+                  if (releaseTitle && giantbomb.title !== releaseTitle) {
                     // Add title to alternate titles and use platform title instead
                     if (giantbomb.alternate_titles) {
-                      giantbomb.alternate_titles = giantbomb.alternate_titles + ', ' + giantbomb.title;
+                      giantbomb.alternate_titles.push(giantbomb.title);
                     } else {
-                      giantbomb.alternate_titles = title;
+                      giantbomb.alternate_titles = [giantbomb.title];
                     }
                     giantbomb.title = releaseTitle;
                   }
-                  giantbomb.year = platformTbody
-                    .find('td[data-field="releaseDate"]')
-                    .text()
-                    .trim()
-                    .replace(/.*((?:19|20)\d\d).*/, '$1');
+                  giantbomb.rating = releaseBlock.find('[data-field="rating"]').text().trim().replace(/^$/, 'N/A');
+                  giantbomb.platform = releaseBlock.find('[data-field="platform"]').text().trim();
+                  giantbomb.year = releaseBlock.find('[data-field="releaseDate"]').getYear();
 
-                  GM_setValue('giantbomb', giantbomb);
-                  const ggnButton = $('input#save_link');
-                  ggnButton.off('click.validate');
-                  ggnButton.on('click.complete', () => window.close());
-                  ggnButton.val('Close and return to GGn').css({backgroundColor: 'green'});
-                },
-                error: (error) => {
-                  const ggnButton = $('input#save_link');
-                  ggnButton.val('Encountered an error getting releases. Check console').css({backgroundColor: 'red'});
-                  console.error(error);
-                },
-              });
-            },
-            error: (error) => {
-              const ggnButton = $('input#save_link');
-              ggnButton
-                .val('Encountered an error getting images url json. Check console')
-                .css({backgroundColor: 'red'});
-              console.error(error);
-            },
-          });
-        },
-        error: (error) => {
-          const ggnButton = $('input#save_link');
-          ggnButton.val('Encountered an error getting images page. Check console').css({backgroundColor: 'red'});
-          console.error(error);
-        },
-      });
-      // #endregion Fetch release info
-      // #endregion Fetch wiki info
+                  // Prepend extra information to description
+                  const region = releaseBlock.find('[data-field="region"]').text().trim();
+                  // TODO developers and publishers could have multiple entries, but I don't have an example
+                  const developers = releaseBlock.find('[data-field="developers"]').absoluteLinks().html().trim();
+                  const publishers = releaseBlock.find('[data-field="publishers"]').absoluteLinks().html().trim();
+                  const singlePlayerFeatures = releaseBlock.find('[data-field="singlePlayerFeatures"]').text().trim();
+                  const multiPlayerFeatures = releaseBlock.find('[data-field="multiPlayerFeatures"]').text().trim();
+                  const notes = releaseBlock.find('[data-field="description"]').text().trim();
+
+                  var releaseInfo = $('<div>').append(
+                    $('<ul>').append(
+                      Object.entries({
+                        Region: region,
+                        Developers: developers,
+                        Publishers: publishers,
+                        'Single Player Features': singlePlayerFeatures,
+                        'Multi-player Features': multiPlayerFeatures,
+                        'Release Notes': notes,
+                      })
+                        .filter(([_, value]) => value && value.toUpperCase() !== 'N/A')
+                        .map(([key, value]) => $('<li>').append(`${key}: ${value}`)),
+                    ),
+                    '<br/>',
+                  );
+                  giantbomb.description = html2bb(releaseInfo) + giantbomb.description;
+
+                  fetchComplete(giantbomb);
+                });
+              },
+              error: (error) => {
+                const ggnButton = $('input#save_link');
+                ggnButton.val('Encountered an error getting releases. Check console').css({backgroundColor: 'red'});
+                console.error(error);
+              },
+            });
+          },
+          error: (error) => {
+            const ggnButton = $('input#save_link');
+            ggnButton.val('Encountered an error getting images url json. Check console').css({backgroundColor: 'red'});
+            console.error(error);
+          },
+        });
+      },
+      error: (error) => {
+        const ggnButton = $('input#save_link');
+        ggnButton.val('Encountered an error getting images page. Check console').css({backgroundColor: 'red'});
+        console.error(error);
+      },
     });
-
-    alert('Please click a platform link in the highlighted box.');
+    // #endregion Fetch release info
   }
 
   function add_validate_button() {
-    GM_addStyle(`
-input#save_link {
-  position: fixed;
-  left: 0;
-  top: 0;
-  z-index: 999999;
-  cursor: pointer;
-  height: auto;
-  width: auto;
-  padding: 10px;
-  background-color: lightblue;
-}
-`);
-
     if (typeof console != 'undefined' && typeof console.log != 'undefined') console.log('Adding button to window');
     $('body').prepend(
-      $('<input type="button" id="save_link" value="Save link for GGn"/>').on('click.validate', getGameInfo),
+      $('<input type="button" id="save_link" value="Save link for GGn"/>')
+        .css({
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          zIndex: 50000,
+          cursor: 'pointer',
+          height: 'auto',
+          width: 'auto',
+          padding: '10px',
+          backgroundColor: 'lightblue',
+        })
+        .on('click.validate', getGameInfo),
     );
   }
 
@@ -224,18 +322,25 @@ input#save_link {
   function validateSearchedValues() {
     const giantbomb = GM_getValue('giantbomb', {});
     if (giantbomb.hasOwnProperty('tags'))
-      tagReplacements.forEach(({regex, replacement}) => (giantbomb.tags = giantbomb.tags.replace(regex, replacement)));
+      tagReplacements.forEach(
+        ({regex, replacement}) =>
+          (giantbomb.tags = giantbomb.tags.flatMap((tag) => tag.replace(regex, replacement).toLowerCase().split(', '))),
+      );
     if (giantbomb.hasOwnProperty('platform'))
       platformReplacements.forEach(
         ({regex, replacement}) => (giantbomb.platform = giantbomb.platform.replace(regex, replacement)),
       );
+    if (giantbomb.hasOwnProperty('rating'))
+      ratingReplacements.forEach(
+        ({regex, replacement}) => (giantbomb.rating = giantbomb.rating.replace(regex, replacement)),
+      );
 
     if (isNewGroup()) {
       $('#giantbomburi').val(giantbomb.giantbomb);
-      $('#Rating').val(giantbomb.rating);
-      $('#aliases').val(giantbomb.alternate_titles);
+      $(`#Rating option:contains('${giantbomb.rating}')`).prop('selected', true);
+      $('#aliases').val(Array.from(new Set(giantbomb.alternate_titles)).join(', '));
       $('#title').val(giantbomb.title);
-      $('#tags').val(giantbomb.tags);
+      $('#tags').val(Array.from(new Set(giantbomb.tags)).join(', '));
       $('#year').val(giantbomb.year);
       $('#image').val(giantbomb.cover);
       $('#album_desc').val(giantbomb.description);
@@ -270,13 +375,14 @@ input#save_link {
       $('<input id="giantbomb_uploady_search" type="button" value="Search Giantbomb"/>').click(function () {
         var title = encodeURIComponent($(titleFieldSelector).val());
 
-        window.open(`https://www.giantbomb.com/search/?header=1&i=game&q=${title}`, '_blank'); //For every platform
+        window.open(`https://www.giantbomb.com/search/?header=1&i=game&q=${title}`, '_blank', 'popup=0,rel=noreferrer');
 
         GM_setValue('giantbomb', {});
+
+        $(window).focus(() => {
+          if (GM_getValue('giantbomb', {}).hasOwnProperty('platform')) validateSearchedValues();
+        });
       }),
-      $('<input id="giantbomb_uploady_Validate" type="button" value="Validate giantbomb"/>').click(
-        validateSearchedValues,
-      ),
     );
   }
   // #endregion
