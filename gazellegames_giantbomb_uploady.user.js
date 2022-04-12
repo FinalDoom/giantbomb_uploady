@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.0.2
+// @version      0.0.3
 // @match        https://gazellegames.net/upload.php
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -72,16 +72,23 @@
     {regex: /Oric'/, replacement: 'Tangerine Oric'},
   ];
   const ratingReplacements = [
-    {regex: /Cero: A/, replacement: '3+'},
-    {regex: /Cero: B/, replacement: '12+'},
-    {regex: /Cero: C/, replacement: '16+'},
-    {regex: /Cero: D/, replacement: '16+'},
-    {regex: /Cero: Z/, replacement: '18+'},
-    {regex: /ESRB: EC/, replacement: '3+'}, // Needs verification
-    {regex: /ESRB: E/, replacement: '7+'},
-    {regex: /ESRB: T/, replacement: '12+'},
+    // Descending order because of regex overlap / consistency
+    {regex: /OFLC: MA\s*15\+/, replacement: '18+'},
+    {regex: /OFLC: M(?:15\+)?/, replacement: '16+'},
+    {regex: /OFLC: G8\+/, replacement: '12+'},
+    {regex: /OFLC: PG/, replacement: '7+'}, // Needs verification
+    {regex: /OFLC: G(?:eneral)?/, replacement: '3+'},
+    {regex: /ESRB: AO/, replacement: '18+'},
     {regex: /ESRB: M/, replacement: '16+'},
-    {regex: /ESRB: AO/, replacement: '18+'}, // Needs verification
+    {regex: /ESRB: T/, replacement: '12+'},
+    {regex: /ESRB: E10\+/, replacement: '12+'},
+    {regex: /ESRB: E/, replacement: '7+'},
+    {regex: /ESRB: EC/, replacement: '3+'},
+    {regex: /Cero: Z/, replacement: '18+'},
+    {regex: /Cero: [CD]/, replacement: '16+'},
+    {regex: /Cero: B/, replacement: '12+'},
+    {regex: /Cero: A.*/, replacement: '3+'},
+    {regex: /PEGI: (\d+\+)/, replacement: '$1'},
   ];
 
   const bbConverter = new HTML2BBCode();
