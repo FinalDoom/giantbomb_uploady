@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.0.3
+// @version      0.0.4
 // @match        https://gazellegames.net/upload.php
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -211,14 +211,14 @@
                       alignContent: 'center',
                       zIndex: 5000,
                     })
-                    .append(TOC.css({width: '443px', margin: 'auto'})),
+                    .append(TOC.css({width: '443px', maxHeight: '100%', margin: 'auto', overflowY: 'auto'})),
                 );
                 TOC.find('h3').text('Please choose a release').css({color: 'yellow'});
                 TOC.find('a').click(function (event) {
                   event.preventDefault();
                   if ($(this).attr('href').startsWith('#toc-release-platform')) return;
                   // UI response stuff
-                  TOC.append(saveLink.css({width: '', height: '', left: '', top: '', position: ''}).remove())
+                  TOC.prepend(saveLink.css({width: '', height: '', left: '', top: '', position: ''}).remove())
                     .find('h3')
                     .css({color: ''});
 
