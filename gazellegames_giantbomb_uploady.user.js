@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.0.7
+// @version      0.0.8
 // @match        https://gazellegames.net/upload.php
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -98,7 +98,7 @@
         jqObj
           .html()
           .replace(/<h2\s+[^>]+>/g, '<h2>')
-          .replace(/<\/div>/g, '<br/></div>'),
+          .replace(/<\/(div|p)>/g, '</$1><br/>'),
       )
       .toString()
       .replace(/\[\/?h2]/g, '==')
@@ -389,6 +389,7 @@
     $(titleFieldSelector).after(
       $('<input id="giantbomb_uploady_search" type="button" value="Search Giantbomb"/>').click(function () {
         var title = encodeURIComponent($(titleFieldSelector).val());
+        if (!title) return;
 
         window.open(`https://www.giantbomb.com/search/?header=1&i=game&q=${title}`, '_blank', 'popup=0,rel=noreferrer');
 
