@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.0.6
+// @version      0.0.7
 // @match        https://gazellegames.net/upload.php
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -46,30 +46,30 @@
   const platformReplacements = [
     {regex: /iPhone|iPad|iPod/, replacement: 'iOS'},
     {regex: /PC|Windows Phone/, replacement: 'Windows'},
-    {regex: /Xbox 360 Games Store'/, replacement: 'Xbox 360'},
-    {regex: /Nintendo Entertainment System'/, replacement: 'NES'},
-    {regex: /Nintendo 64DD'/, replacement: 'Nintendo 64'},
-    {regex: /GameCube'/, replacement: 'Nintendo GameCube'},
-    {regex: /Super Nintendo Entertainment System'/, replacement: 'Super NES'},
-    {regex: /Wii Shop'/, replacement: 'Wii'},
-    {regex: /PlayStation'/, replacement: 'PlayStation 1'},
-    {regex: /PlayStation Network (PS3)'/, replacement: 'PlayStation 3'},
-    {regex: /PlayStation Network (PSP)'/, replacement: 'PlayStation Portable'},
-    {regex: /PlayStation Network (Vita)'/, replacement: 'PlayStation Vita'},
-    {regex: /Sega Master System'/, replacement: 'Master System'},
-    {regex: /Genesis'/, replacement: 'Mega Drive'},
-    {regex: /Jaguar CD'/, replacement: 'Atari Jaguar'},
-    {regex: /Wonderswan'/, replacement: 'Bandai WonderSwan'},
-    {regex: /ColecoVision'/, replacement: 'Colecovision'},
-    {regex: /Amiga'/, replacement: 'Commodore Amiga'},
-    {regex: /Commodore 16'/, replacement: 'Commodore Plus-4'},
-    {regex: /Odyssey 2'/, replacement: 'Magnavox-Phillips Odyssey'},
-    {regex: /Intellivision'/, replacement: 'Mattel Intellivision'},
-    {regex: /NEC PC-6001|NEC PC-8801|NEC PC-9801'/, replacement: 'NEC PC-FX'},
-    {regex: /TurboGrafx-16'/, replacement: 'NEC TurboGrafx-16'},
-    {regex: /N-Gage'/, replacement: 'Nokia N-Gage'},
-    {regex: /Neo Geo'/, replacement: 'SNK Neo Geo'},
-    {regex: /Oric'/, replacement: 'Tangerine Oric'},
+    {regex: /Xbox 360 Games Store/, replacement: 'Xbox 360'},
+    {regex: /Nintendo Entertainment System/, replacement: 'NES'},
+    {regex: /Nintendo 64DD/, replacement: 'Nintendo 64'},
+    {regex: /GameCube/, replacement: 'Nintendo GameCube'},
+    {regex: /Super Nintendo Entertainment System/, replacement: 'Super NES'},
+    {regex: /Wii Shop/, replacement: 'Wii'},
+    {regex: /PlayStation/, replacement: 'PlayStation 1'},
+    {regex: /PlayStation Network (PS3)/, replacement: 'PlayStation 3'},
+    {regex: /PlayStation Network (PSP)/, replacement: 'PlayStation Portable'},
+    {regex: /PlayStation Network (Vita)/, replacement: 'PlayStation Vita'},
+    {regex: /Sega Master System/, replacement: 'Master System'},
+    {regex: /Genesis/, replacement: 'Mega Drive'},
+    {regex: /Jaguar CD/, replacement: 'Atari Jaguar'},
+    {regex: /Wonderswan/, replacement: 'Bandai WonderSwan'},
+    {regex: /ColecoVision/, replacement: 'Colecovision'},
+    {regex: /Amiga/, replacement: 'Commodore Amiga'},
+    {regex: /Commodore 16/, replacement: 'Commodore Plus-4'},
+    {regex: /Odyssey 2/, replacement: 'Magnavox-Phillips Odyssey'},
+    {regex: /Intellivision/, replacement: 'Mattel Intellivision'},
+    {regex: /NEC PC-6001|NEC PC-8801|NEC PC-9801/, replacement: 'NEC PC-FX'},
+    {regex: /TurboGrafx-16/, replacement: 'NEC TurboGrafx-16'},
+    {regex: /N-Gage/, replacement: 'Nokia N-Gage'},
+    {regex: /Neo Geo/, replacement: 'SNK Neo Geo'},
+    {regex: /Oric/, replacement: 'Tangerine Oric'},
   ];
   const ratingReplacements = [
     // Descending order because of regex overlap / consistency
