@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.0.4
+// @version      0.0.6
 // @match        https://gazellegames.net/upload.php
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -181,7 +181,7 @@
               success: (data) => {
                 // Here pull the TOC and display it for selection
                 const TOC = $(data).find('.aside-toc').parent();
-                if (!TOC.size()) {
+                if (!TOC.length) {
                   // If there is no TOC fall back to below for just selecting platform, nothing else
                   $(`#wiki-${gameId}-platforms`)
                     .css({border: '2px solid yellow'})
@@ -345,9 +345,17 @@
     if (isNewGroup()) {
       $('#giantbomburi').val(giantbomb.giantbomb);
       $(`#Rating option:contains('${giantbomb.rating}')`).prop('selected', true);
-      $('#aliases').val(Array.from(new Set(giantbomb.alternate_titles)).join(', '));
+      $('#aliases').val(
+        Array.from(new Set(giantbomb.alternate_titles))
+          .filter((a) => !!a)
+          .join(', '),
+      );
       $('#title').val(giantbomb.title);
-      $('#tags').val(Array.from(new Set(giantbomb.tags)).join(', '));
+      $('#tags').val(
+        Array.from(new Set(giantbomb.tags))
+          .filter((t) => !!t)
+          .join(', '),
+      );
       $('#year').val(giantbomb.year);
       $('#image').val(giantbomb.cover);
       $('#album_desc').val(giantbomb.description);
@@ -361,7 +369,7 @@
     }
 
     const add_screen = $("a:contains('+')");
-    const screenshotFields = $("[name='screens[]']").size();
+    const screenshotFields = $("[name='screens[]']").length;
     giantbomb.screenshots.forEach(function (screenshot, index) {
       if (index >= 16) return; //The site doesn't accept more than 16 screenshots
       if (index >= screenshotFields) add_screen.click();
@@ -399,4 +407,4 @@
   } else if (window.location.hostname === 'www.giantbomb.com' && isWikiPage()) {
     add_validate_button();
   }
-})(unsafeWindow || window, (unsafeWindow || window).jQuery, html2bbcode);
+})(unsafeWindow || window, jQuery || (unsafeWindow || window).jQuery, html2bbcode);
