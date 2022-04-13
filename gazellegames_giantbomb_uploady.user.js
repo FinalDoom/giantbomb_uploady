@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.1.0
+// @version      0.1.1
 // @match        https://gazellegames.net/upload.php*
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -114,13 +114,21 @@
         (postimageButton = $(
           '<input type="button" id="postimage_proxy" value="Proxy via PostImage" title="Open a postimage.org page and automatically proxy all non-ptpimg images">',
         ).click(() => {
+          if (
+            $('#image, input[name="screens[]"]')
+              .not('.error')
+              .filter((_, element) => element.value.split('/')[2] !== 'ptpimg.me').length
+          ) {
+            alert('Please attempt to submit all screenshots through PTPImg buttons first.');
+            return;
+          }
           window.open('https://postimages.org/web', '_blank', 'popup=0,rel=noreferrer');
           $(window).on('focus.postimage', () => {
             const postimage = GM_getValue('postimage', {});
             const postimageProxied = GM_getValue('postimage-proxied', {});
             if (postimageProxied.hasOwnProperty('giantbomb')) {
               $(window).off('focus.postimage');
-              const unproxied = postimage.giantbomb;
+              const unproxied = postimage.giantbomb || {};
               const proxied = postimageProxied.giantbomb;
               Object.entries(proxied).forEach(([id, img]) => {
                 $(`#${id}`).val(img.url);
