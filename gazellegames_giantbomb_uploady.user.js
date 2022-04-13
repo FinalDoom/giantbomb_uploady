@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GazelleGames Giantbomb Uploady
 // @namespace    https://gazellegames.net/
-// @version      0.1.1
+// @version      0.1.2
 // @match        https://gazellegames.net/upload.php*
 // @match        https://gazellegames.net/torrents.php?action=editgroup*
 // @match        https://www.giantbomb.com/*
@@ -273,7 +273,7 @@
         $.ajax({
           method: 'GET',
           url: 'imgup.php',
-          data: {img: url},
+          data: {img: url.split('?')[0]},
           success: (_, __, xhr) => imageOnLoad(xhr.responseText, element),
           error: (element) => proxyThroughPostImg(element),
         });
